@@ -1,21 +1,15 @@
 package com.devonfw.module.logging.common.impl;
 
-import static org.mockito.Mockito.verify;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.owasp.security.logging.filter.ExcludeClassifiedMarkerFilter;
 import org.owasp.security.logging.mask.MaskingConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 
-import com.devonfw.module.logging.common.impl.SecureLogging;
-import com.devonfw.module.test.common.base.BaseTest;
 import com.devonfw.module.test.common.base.ModuleTest;
 
 import ch.qos.logback.classic.Level;
@@ -23,7 +17,6 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.spi.FilterReply;
 
@@ -35,7 +28,6 @@ import ch.qos.logback.core.spi.FilterReply;
  * owasp-security-logging-logback/src/test/java/org/owasp/security/logging/mask/MaskingConverterTest and
  * ../filter/ExcludeClassifiedMarkerFilterTest
  */
-@RunWith(MockitoJUnitRunner.class)
 public class SecureLoggingLogbackTest extends ModuleTest {
 
   private static final LoggerContext LOGGER_CONTEXT = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -46,18 +38,8 @@ public class SecureLoggingLogbackTest extends ModuleTest {
 
   private ExcludeClassifiedMarkerFilter filterExclClassif;
 
-  @Mock
-  private RollingFileAppender<ILoggingEvent> mockAppender = new RollingFileAppender<>();
+  private MockAppender mockAppender;
 
-  // Captor is genericised with ch.qos.logback.classic.spi.LoggingEvent
-  @Captor
-  private ArgumentCaptor<LoggingEvent> captorLoggingEvent;
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * Called by {@code final} method {@link BaseTest#setUp()}.
-   */
   @Override
   protected void doSetUp() {
 
@@ -77,6 +59,7 @@ public class SecureLoggingLogbackTest extends ModuleTest {
     this.filterExclClassif.start();
     assertThat(this.filterExclClassif.isStarted()).isTrue();
 
+    this.mockAppender = new MockAppender();
     this.mockAppender.setContext(LOGGER_CONTEXT);
     this.mockAppender.setEncoder(this.encoder);
     this.mockAppender.start();
@@ -84,11 +67,6 @@ public class SecureLoggingLogbackTest extends ModuleTest {
     ((ch.qos.logback.classic.Logger) LOG).addAppender(this.mockAppender);
   }
 
-  /**
-   * {@inheritDoc}
-   * <p>
-   * Called by {@code final} method {@link BaseTest#tearDown()}.
-   */
   @Override
   protected void doTearDown() {
 
@@ -97,12 +75,9 @@ public class SecureLoggingLogbackTest extends ModuleTest {
     ((ch.qos.logback.classic.Logger) LOG).detachAppender(this.mockAppender);
   }
 
-  private LoggingEvent getLastLogEvent() {
+  private ILoggingEvent getLastLogEvent() {
 
-    // Verify our logging interactions
-    verify(this.mockAppender).doAppend(this.captorLoggingEvent.capture());
-    // Get the logging event from the captor
-    return this.captorLoggingEvent.getValue();
+    return this.mockAppender.getLastEvent();
   }
 
   /**
@@ -119,7 +94,7 @@ public class SecureLoggingLogbackTest extends ModuleTest {
 
     // then
     // Retrieve log event
-    final LoggingEvent loggingEvent = getLastLogEvent();
+    final ILoggingEvent loggingEvent = getLastLogEvent();
     // Check log level is correct
     assertThat(loggingEvent.getLevel()).isEqualTo(Level.INFO);
 
@@ -144,7 +119,7 @@ public class SecureLoggingLogbackTest extends ModuleTest {
 
     // then
     // Retrieve log event
-    final LoggingEvent loggingEvent = getLastLogEvent();
+    final ILoggingEvent loggingEvent = getLastLogEvent();
     // Check log level is correct
     assertThat(loggingEvent.getLevel()).isEqualTo(Level.INFO);
 
@@ -170,7 +145,7 @@ public class SecureLoggingLogbackTest extends ModuleTest {
 
     // then
     // Retrieve log event
-    final LoggingEvent loggingEvent = getLastLogEvent();
+    final ILoggingEvent loggingEvent = getLastLogEvent();
     // Check log level is correct
     assertThat(loggingEvent.getLevel()).isEqualTo(Level.INFO);
 
@@ -194,7 +169,7 @@ public class SecureLoggingLogbackTest extends ModuleTest {
 
     // then
     // Retrieve log event
-    final LoggingEvent loggingEvent = getLastLogEvent();
+    final ILoggingEvent loggingEvent = getLastLogEvent();
     // Check log level is correct
     assertThat(loggingEvent.getLevel()).isEqualTo(Level.INFO);
 
@@ -250,6 +225,24 @@ public class SecureLoggingLogbackTest extends ModuleTest {
     assertThat(multiMarker.hasReferences()).as("MultiMarker has references.").isTrue();
     assertThat(multiMarker.contains(securMarker)).as("MultiMarker contains Security Marker.").isTrue();
     assertThat(multiMarker.contains(confidMarker)).as("MultiMarker contains Confidential Marker.").isTrue();
+  }
+
+  private static final class MockAppender extends RollingFileAppender<ILoggingEvent> {
+
+    private final Queue<ILoggingEvent> events = new LinkedList<>();
+
+    public ILoggingEvent getLastEvent() {
+
+      return this.events.poll();
+    }
+
+    @Override
+    public void doAppend(ILoggingEvent eventObject) {
+
+      this.events.add(eventObject);
+      super.doAppend(eventObject);
+    }
+
   }
 
 }

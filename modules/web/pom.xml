@@ -24,13 +24,11 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
     </dependency>
-    <!--
     <dependency>
-      <groupId>net.sf.m-m-m</groupId>
-      <artifactId>mmm-util-core</artifactId>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
     </dependency>
-    -->
-    
+
     <dependency>
       <groupId>com.devonfw.java.modules</groupId>
       <artifactId>devon4j-test</artifactId>
